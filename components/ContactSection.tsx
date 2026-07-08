@@ -8,15 +8,20 @@ const OBJECT_TYPES = ["Квартира", "Дом", "Офис / коммерци
 export function ContactSection() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [objectType, setObjectType] = useState(OBJECT_TYPES[0]);
   const [comment, setComment] = useState("");
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setSubmitError("");
+
     const nextErrors: { name?: string; phone?: string } = {};
     if (name.trim().length < 2) nextErrors.name = "Укажите имя";
     if (phone.replace(/\D/g, "").length < 10) nextErrors.phone = "Укажите корректный телефон";
@@ -29,7 +34,30 @@ export function ContactSection() {
       return;
     }
 
-    setSent(true);
+    setSubmitting(true);
+
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, objectType, comment }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(data?.message || "Не удалось отправить заявку");
+      }
+
+      setSent(true);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Не удалось отправить заявку. Попробуйте позже.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -137,7 +165,8 @@ export function ContactSection() {
                 </label>
                 <select
                   id="field-object"
-                  defaultValue={OBJECT_TYPES[0]}
+                  value={objectType}
+                  onChange={(e) => setObjectType(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white focus:border-gold"
                 >
                   {OBJECT_TYPES.map((o) => (
@@ -164,10 +193,16 @@ export function ContactSection() {
 
               <button
                 type="submit"
+                disabled={submitting}
                 className="mt-1 rounded-full bg-gold px-6 py-3.5 font-semibold text-navy-deep transition-colors hover:bg-gold-dark hover:text-white"
               >
-                Отправить заявку
+                {submitting ? "Отправляем..." : "Отправить заявку"}
               </button>
+              {submitError && (
+                <p role="alert" className="text-center text-sm text-red-300">
+                  {submitError}
+                </p>
+              )}
               <p className="text-center text-xs text-white/50">
                 Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных
               </p>

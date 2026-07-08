@@ -97,13 +97,31 @@ test.describe("Лендинг СтройГарант", () => {
   });
 
   test("валидная форма отправляется и показывает подтверждение", async ({ page }) => {
+    let requestBody: unknown;
+    await page.route("**/api/leads", async (route) => {
+      requestBody = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+    });
+
     await page.goto("/");
     await waitForHydration(page);
     await page.locator("#contacts").scrollIntoViewIfNeeded();
     await page.locator("#field-name").fill("Иван Иванов");
     await page.locator("#field-phone").fill("+7 (999) 123-45-67");
+    await page.locator("#field-object").selectOption("Дом");
+    await page.locator("#field-comment").fill("Нужен ремонт кухни и спальни");
     await page.getByRole("button", { name: "Отправить заявку" }).click();
     await expect(page.getByText("Заявка отправлена")).toBeVisible();
+    expect(requestBody).toEqual({
+      name: "Иван Иванов",
+      phone: "+7 (999) 123-45-67",
+      objectType: "Дом",
+      comment: "Нужен ремонт кухни и спальни",
+    });
   });
 
   test("слайдер до/после двигается перетаскиванием и с клавиатуры", async ({ page }) => {
