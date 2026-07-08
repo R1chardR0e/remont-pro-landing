@@ -28,7 +28,7 @@ async function telegramRequest<T>(method: string, body?: Record<string, unknown>
 
   const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: body ? "POST" : "GET",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: body ? { "Content-Type": "application/json; charset=utf-8" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
@@ -75,7 +75,8 @@ export async function POST(request: Request) {
   let payload: LeadPayload;
 
   try {
-    payload = (await request.json()) as LeadPayload;
+    const rawBody = new TextDecoder("utf-8", { fatal: false }).decode(await request.arrayBuffer());
+    payload = JSON.parse(rawBody) as LeadPayload;
   } catch {
     return NextResponse.json({ message: "Некорректный формат заявки" }, { status: 400 });
   }

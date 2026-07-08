@@ -39,7 +39,7 @@ export function ContactSection() {
     try {
       const response = await fetch("/api/leads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ name, phone, objectType, comment }),
       });
 
